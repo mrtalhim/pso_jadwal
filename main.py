@@ -14,7 +14,7 @@ class Particle:
 
     def update_x(self):
         self.x = round(self.x + self.v)
-        self.x = self.x % self.input_range['max']
+        self.x = self.x % self.input_range['max'] + 1
 
     def set_local_best(self, local_best):
         self.local_best = local_best
@@ -39,16 +39,16 @@ class Pelajaran:
     def compare(self, other):
         if isinstance(other, self.__class__):
             collisions = 0
-            if self.hari.get_x() == other.hari.get_x():
-                collisions += 1
-            if self.jam.get_x() == other.jam.get_x():
+            if self.hari.get_x() == other.hari.get_x() and self.jam.get_x() == other.jam.get_x():
                 collisions += 1
             if self.get_id_guru() == other.get_id_guru():
                 collisions += 1
-            if self.hari.get_x() < 0:
+            if self.get_id_pel() == other.get_id_pel():
                 collisions += 1
-            if self.jam.get_x() < 0:
-                collisions += 1
+            # if self.hari.get_x() < 0:
+            #     collisions += 1
+            # if self.jam.get_x() < 0:
+            #     collisions += 1
             return collisions
         else:
             return 0
@@ -81,7 +81,7 @@ def main():
 
     """calculate fitness"""
     W, c1, c2 = 0.5, 1.5, 1.5
-    iteration = 10
+    iteration = 2
 
     for z in range(iteration):
         global_best = 0
