@@ -45,22 +45,19 @@ class Pelajaran:
                 collisions += 1
             if self.get_id_pel() == other.get_id_pel():
                 collisions += 1
-            # if self.hari.get_x() < 0:
-            #     collisions += 1
-            # if self.jam.get_x() < 0:
-            #     collisions += 1
             return collisions
         else:
             return 0
 
     def set_local_best(self, fitness):
-        self.local_best = fitness if fitness > self.local_best else self.local_best
+        self.local_best = fitness
         self.hari.set_local_best(self.local_best)
         self.jam.set_local_best(self.local_best)
 
     def update_velocity(self, W, c1, c2, global_best):
-        self.hari.update_velocity(W, c1, c2, global_best)
-        self.jam.update_velocity(W, c1, c2, global_best)
+        if self.local_best < 1.0:
+            self.hari.update_velocity(W, c1, c2, global_best)
+            self.jam.update_velocity(W, c1, c2, global_best)
 
     def get_id_guru(self):
         return self.id_guru
@@ -69,6 +66,7 @@ class Pelajaran:
         return self.id_pel
 
 def main():
+    # random.seed(0)
     jumlah_jadwal = 12
     kelas = 12
     range_hari = {'min': 1, 'max': 5}
@@ -81,7 +79,7 @@ def main():
 
     """calculate fitness"""
     W, c1, c2 = 0.5, 1.5, 1.5
-    iteration = 2
+    iteration = 10
 
     for z in range(iteration):
         global_best = 0
