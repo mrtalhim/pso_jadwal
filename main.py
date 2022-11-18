@@ -1,5 +1,5 @@
 import random
-import math
+import pandas
 
 class Particle:
     def __init__(self, input_range):
@@ -19,32 +19,39 @@ class Particle:
     def set_local_best(self, local_best):
         self.local_best = local_best
 
-    def get_x(self):
+    def get_x(self) -> int:
         return int(self.x)
     
     def get_local_best(self):
         return self.local_best
 
 class Pelajaran:
-    def __init__(self, range_hari, range_jam, id_guru='', id_pel='') -> None:
+    def __init__(self, range_hari, range_jam, id_guru='', id_pel='', id_kelas='') -> None:
         self.hari = Particle(range_hari)
         self.jam = Particle(range_jam)
         self.id_guru = id_guru
         self.id_pel = id_pel
+        self.id_kelas = id_kelas
         self.local_best = 0
-
+        print(''.format())
     def __str__(self) -> str:
-        return f'(guru-pel): {self.id_guru},{self.id_pel} (hari-jam): {self.hari.get_x()},{self.jam.get_x()} local_best: {self.local_best}'
+        info = '(guru-pel-kelas): {:>2s},{:>2s},{:>2s}'.format(self.id_guru, self.id_pel, self.id_kelas)
+        waktu = '(hari-jam): {:>2d},{:>2d}'.format(self.hari.get_x(), self.jam.get_x())
+        local_best = 'local_best: {:.2f}'.format(self.local_best)
+        return ' '.join([waktu, info, local_best])
     
     def compare(self, other):
         if isinstance(other, self.__class__):
             collisions = 0
             if self.hari.get_x() == other.hari.get_x() and self.jam.get_x() == other.jam.get_x():
-                collisions += 1
-            if self.get_id_guru() == other.get_id_guru():
-                collisions += 1
-            if self.get_id_pel() == other.get_id_pel():
-                collisions += 1
+                if self.id_kelas != other.id_kelas and self.id_guru == other.id_guru:
+                    collisions += 1 # bentrok guru
+                if self.id_kelas == other.id_kelas:
+                    collisions += 1 # bentrok pelajaran/waktu?
+            # if self.get_id_guru() == other.get_id_guru():
+            #     collisions += 1
+            # if self.get_id_pel() == other.get_id_pel():
+            #     collisions += 1
             return collisions
         else:
             return 0
@@ -66,12 +73,11 @@ class Pelajaran:
         return self.id_pel
 
 def main():
-    # random.seed(0)
-    jumlah_jadwal = 12
+    jumlah_jadwal = 36
     kelas = 12
     range_hari = {'min': 1, 'max': 5}
     range_jam = {'min': 1, 'max': 5}
-    jadwal = [Pelajaran(range_hari, range_jam, id_guru=str(x), id_pel=str(x)) for x in range(jumlah_jadwal)]
+    jadwal = [Pelajaran(range_hari, range_jam, id_guru=str(x), id_pel=str(x), id_kelas=str(x % kelas)) for x in range(jumlah_jadwal)] # TODO
 
     for x in jadwal:
         print(x)
@@ -79,7 +85,7 @@ def main():
 
     """calculate fitness"""
     W, c1, c2 = 0.5, 1.5, 1.5
-    iteration = 10
+    iteration = 100
 
     for z in range(iteration):
         global_best = 0
