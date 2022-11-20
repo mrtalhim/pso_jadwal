@@ -1,5 +1,5 @@
 import random
-import pandas
+import pandas as pd
 
 class Particle:
     def __init__(self, input_range):
@@ -34,6 +34,7 @@ class Pelajaran:
         self.id_kelas = id_kelas
         self.local_best = 0
         print(''.format())
+    
     def __str__(self) -> str:
         info = '(guru-pel-kelas): {:>2s},{:>2s},{:>2s}'.format(self.id_guru, self.id_pel, self.id_kelas)
         waktu = '(hari-jam): {:>2d},{:>2d}'.format(self.hari.get_x(), self.jam.get_x())
@@ -47,11 +48,9 @@ class Pelajaran:
                 if self.id_kelas != other.id_kelas and self.id_guru == other.id_guru:
                     collisions += 1 # bentrok guru
                 if self.id_kelas == other.id_kelas:
-                    collisions += 1 # bentrok pelajaran/waktu?
-            # if self.get_id_guru() == other.get_id_guru():
-            #     collisions += 1
-            # if self.get_id_pel() == other.get_id_pel():
-            #     collisions += 1
+                    collisions += 1 # bentrok waktu
+                if self.id_pel == other.id_pel:
+                    collisions += 1 # bentrok waktu
             return collisions
         else:
             return 0
@@ -72,8 +71,27 @@ class Pelajaran:
     def get_id_pel(self):
         return self.id_pel
 
+    def get_id_kelas(self):
+        return self.id_kelas
+
+def display_jadwal(jadwal):
+    output = []
+    for pelajaran in jadwal:
+        hari = pelajaran.hari.get_x()
+        jam = pelajaran.jam.get_x()
+        kelas = pelajaran.get_id_kelas()
+        guru = pelajaran.get_id_guru()
+        pel = pelajaran.get_id_pel()
+        output.append([hari, jam, kelas, guru, pel])
+        
+    output = pd.DataFrame(output, columns=['hari','jam','kelas','guru','pelajaran'])
+
+    output = output.sort_values(by=['hari', 'jam', 'kelas'])
+
+    print(output)
+
 def main():
-    jumlah_jadwal = 36
+    jumlah_jadwal = 72
     kelas = 12
     range_hari = {'min': 1, 'max': 5}
     range_jam = {'min': 1, 'max': 5}
@@ -101,8 +119,10 @@ def main():
             global_best = fitness if fitness > global_best else global_best
             x.update_velocity(W, c1, c2, global_best)
 
-    for x in jadwal:
-        print(x)
+    # for x in jadwal:
+    #     print(x)
+
+    display_jadwal(jadwal)
 
 if __name__ == "__main__":
     main()
