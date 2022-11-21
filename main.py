@@ -1,5 +1,7 @@
 import random
+import re
 import pandas as pd
+import numpy as np
 
 class Particle:
     def __init__(self, input_range):
@@ -31,9 +33,9 @@ class Pelajaran:
         self.jam = Particle(range_jam)
         self.id_guru = id_guru
         self.id_pel = id_pel
-        self.id_kelas = id_kelas
+        # self.id_kelas = id_kelas
+        self.id_kelas = str(int(id_kelas) + 1) # temp until string
         self.local_best = 0
-        print(''.format())
     
     def __str__(self) -> str:
         info = '(guru-pel-kelas): {:>2s},{:>2s},{:>2s}'.format(self.id_guru, self.id_pel, self.id_kelas)
@@ -46,11 +48,12 @@ class Pelajaran:
             collisions = 0
             if self.hari.get_x() == other.hari.get_x() and self.jam.get_x() == other.jam.get_x():
                 if self.id_kelas != other.id_kelas and self.id_guru == other.id_guru:
-                    collisions += 1 # bentrok guru
+                    collisions += 1 # bentrok waktu
                 if self.id_kelas == other.id_kelas:
-                    collisions += 1 # bentrok waktu
-                if self.id_pel == other.id_pel:
-                    collisions += 1 # bentrok waktu
+                    if self.id_guru != other.id_guru:
+                        collisions += 1 # bentrok guru
+                    if self.id_pel != other.id_pel:
+                        collisions += 1 # bentrok pelajaran
             return collisions
         else:
             return 0
@@ -74,36 +77,56 @@ class Pelajaran:
     def get_id_kelas(self):
         return self.id_kelas
 
-def display_jadwal(jadwal):
-    output = []
+def display_jadwal(jadwal, kelas_total):
+    hari_dict = {1:'SENIN', 2: 'SELASA', 3:'RABU', 4:'KAMIS', 5:'JUMAT'}
+    # output = []
+    # for pelajaran in jadwal:
+    #     hari = pelajaran.hari.get_x()
+    #     jam = pelajaran.jam.get_x()
+    #     kelas = pelajaran.get_id_kelas()
+    #     guru = pelajaran.get_id_guru()
+    #     pel = pelajaran.get_id_pel()
+    #     output.append([hari, jam, kelas, guru, pel])
+        
+    # output = pd.DataFrame(output, columns=['hari','jam','kelas','guru','pelajaran'])
+
+    columns = ['hari', 'Jam'] + [str(x + 1) for x in range(kelas_total)]
+    output = pd.DataFrame(columns=columns)
     for pelajaran in jadwal:
         hari = pelajaran.hari.get_x()
         jam = pelajaran.jam.get_x()
         kelas = pelajaran.get_id_kelas()
-        guru = pelajaran.get_id_guru()
-        pel = pelajaran.get_id_pel()
-        output.append([hari, jam, kelas, guru, pel])
-        
-    output = pd.DataFrame(output, columns=['hari','jam','kelas','guru','pelajaran'])
+        guru_pel = ' '.join([pelajaran.get_id_guru(), pelajaran.get_id_pel()])
+        row = pd.DataFrame({'hari':[hari], 'jam':[jam], kelas:[guru_pel]}, columns=columns)
+        output = pd.concat([output, row])
 
-    output = output.sort_values(by=['hari', 'jam', 'kelas'])
+    # output = output.sort_values(by=['hari', 'jam', 'kelas'])
+    output = output.sort_values(by=['hari', 'jam'])
+    output['hari'] = output['hari'].apply(lambda x: hari_dict[x])
+    output = output.replace(np.nan, '{:^5s}'.format(''), regex=True)
+    output['cleanme'] = 'cleanme'
 
-    print(output)
+    output = output.set_index(['hari', 'cleanme'])
+
+    html = output.to_html(index_names=False)
+    html = re.sub('<th></th>\n.*<th></th>', '<th></th>', html)  # notice your column name here
+    html = re.sub('<th>cleanme</th>', '', html)
+
+    with open('output/index.html', 'w') as fou:
+        fou.write(html)
+
+    # print(output)
 
 def main():
-    jumlah_jadwal = 72
-    kelas = 12
+    jumlah_jadwal = 48
+    kelas = 4
     range_hari = {'min': 1, 'max': 5}
     range_jam = {'min': 1, 'max': 5}
     jadwal = [Pelajaran(range_hari, range_jam, id_guru=str(x), id_pel=str(x), id_kelas=str(x % kelas)) for x in range(jumlah_jadwal)] # TODO
 
-    for x in jadwal:
-        print(x)
-    print()
-
     """calculate fitness"""
     W, c1, c2 = 0.5, 1.5, 1.5
-    iteration = 100
+    iteration = 1
 
     for z in range(iteration):
         global_best = 0
@@ -122,7 +145,11 @@ def main():
     # for x in jadwal:
     #     print(x)
 
-    display_jadwal(jadwal)
+    display_jadwal(jadwal, kelas)
+    for x in jadwal:
+        if x.local_best < 1.0:
+            print('might have collisions')
+            break
 
 if __name__ == "__main__":
     main()
