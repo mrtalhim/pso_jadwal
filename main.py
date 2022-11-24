@@ -1,5 +1,4 @@
-import random
-import re
+import random, re, csv
 import pandas as pd
 import numpy as np
 
@@ -28,13 +27,13 @@ class Particle:
         return self.local_best
 
 class Pelajaran:
-    def __init__(self, range_hari, range_jam, id_guru='', id_pel='', id_kelas='') -> None:
+    def __init__(self, range_hari, range_jam, id = '', id_guru='', id_pel='', id_kelas='') -> None:
         self.hari = Particle(range_hari)
         self.jam = Particle(range_jam)
+        self.id = id
         self.id_guru = id_guru
         self.id_pel = id_pel
-        # self.id_kelas = id_kelas
-        self.id_kelas = str(int(id_kelas) + 1) # temp until string
+        self.id_kelas = id_kelas
         self.local_best = 0
     
     def __str__(self) -> str:
@@ -50,6 +49,7 @@ class Pelajaran:
                 if self.id_kelas != other.id_kelas and self.id_guru == other.id_guru:
                     collisions += 1 # bentrok waktu
                 if self.id_kelas == other.id_kelas:
+                    collisions += 1 # bentrok guru
                     if self.id_guru != other.id_guru:
                         collisions += 1 # bentrok guru
                     if self.id_pel != other.id_pel:
@@ -90,18 +90,22 @@ def display_jadwal(jadwal, kelas_total):
         
     # output = pd.DataFrame(output, columns=['hari','jam','kelas','guru','pelajaran'])
 
-    columns = ['hari', 'Jam'] + [str(x + 1) for x in range(kelas_total)]
+    kelas_columns = list(kelas_total)
+    columns = ['hari', 'Jam'] + kelas_columns
     output = pd.DataFrame(columns=columns)
+    for k in kelas_columns:
+        output.loc[:, k] = output.loc[:, k].apply(lambda x: [x])
+
     for pelajaran in jadwal:
         hari = pelajaran.hari.get_x()
         jam = pelajaran.jam.get_x()
         kelas = pelajaran.get_id_kelas()
-        guru_pel = ' '.join([pelajaran.get_id_guru(), pelajaran.get_id_pel()])
-        row = pd.DataFrame({'hari':[hari], 'jam':[jam], kelas:[guru_pel]}, columns=columns)
+        id = pelajaran.id
+        row = pd.DataFrame({'hari':[hari], 'Jam':[jam], kelas:[id]}, columns=columns)
         output = pd.concat([output, row])
 
-    # output = output.sort_values(by=['hari', 'jam', 'kelas'])
-    output = output.sort_values(by=['hari', 'jam'])
+    output = output.replace({'':np.nan}).fillna(method='bfill')
+    output = output.sort_values(by=['hari', 'Jam'])
     output['hari'] = output['hari'].apply(lambda x: hari_dict[x])
     output = output.replace(np.nan, '{:^5s}'.format(''), regex=True)
     output['cleanme'] = 'cleanme'
@@ -109,7 +113,7 @@ def display_jadwal(jadwal, kelas_total):
     output = output.set_index(['hari', 'cleanme'])
 
     html = output.to_html(index_names=False)
-    html = re.sub('<th></th>\n.*<th></th>', '<th></th>', html)  # notice your column name here
+    html = re.sub('<th></th>\n.*<th></th>', '<th></th>', html)
     html = re.sub('<th>cleanme</th>', '', html)
 
     with open('output/index.html', 'w') as fou:
@@ -117,17 +121,37 @@ def display_jadwal(jadwal, kelas_total):
 
     # print(output)
 
+def read_input(f):
+    file = open(f)
+    csvfile = csv.reader(file)
+    header = []
+    header = next(file)
+    rows = []
+    for row in csvfile:
+        rows.append(row)
+
+    file.close()
+    return rows
+
 def main():
-    jumlah_jadwal = 48
-    kelas = 4
     range_hari = {'min': 1, 'max': 5}
-    range_jam = {'min': 1, 'max': 5}
-    jadwal = [Pelajaran(range_hari, range_jam, id_guru=str(x), id_pel=str(x), id_kelas=str(x % kelas)) for x in range(jumlah_jadwal)] # TODO
+    range_jam = {'min': 1, 'max': 10}
+
+    print('generating particles...')
+    
+    input_rows = read_input('dataset.csv')
+    print(len(input_rows))
+    jadwal = []
+    kelas = set()
+    for x in input_rows:
+        jadwal.append(Pelajaran(range_hari, range_jam, id=x[0], id_guru=x[1], id_pel=x[2], id_kelas=x[3]))
+        kelas.add(x[3])
 
     """calculate fitness"""
     W, c1, c2 = 0.5, 1.5, 1.5
-    iteration = 1
+    iteration = 100
 
+    print('iterating...')
     for z in range(iteration):
         global_best = 0
         collision = 0
@@ -142,9 +166,11 @@ def main():
             global_best = fitness if fitness > global_best else global_best
             x.update_velocity(W, c1, c2, global_best)
 
-    # for x in jadwal:
-    #     print(x)
+    for x in jadwal:
+        print(x)
 
+    print('writing to output/index.html...')
+    kelas = sorted(kelas)
     display_jadwal(jadwal, kelas)
     for x in jadwal:
         if x.local_best < 1.0:
