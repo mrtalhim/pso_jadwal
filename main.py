@@ -37,7 +37,7 @@ class Pelajaran:
         self.local_best = 0
     
     def __str__(self) -> str:
-        info = '(guru-pel-kelas): {:>2s},{:>2s},{:>2s}'.format(self.id_guru, self.id_pel, self.id_kelas)
+        info = '(guru-pel-kelas): {:>2s} {:>2s}'.format(self.id, self.id_kelas)
         waktu = '(hari-jam): {:>2d},{:>2d}'.format(self.hari.get_x(), self.jam.get_x())
         local_best = 'local_best: {:.2f}'.format(self.local_best)
         return ' '.join([waktu, info, local_best])
@@ -45,15 +45,15 @@ class Pelajaran:
     def compare(self, other):
         if isinstance(other, self.__class__):
             collisions = 0
-            if self.hari.get_x() == other.hari.get_x() and self.jam.get_x() == other.jam.get_x():
-                if self.id_kelas != other.id_kelas and self.id_guru == other.id_guru:
-                    collisions += 1 # bentrok waktu
-                if self.id_kelas == other.id_kelas:
-                    collisions += 1 # bentrok guru
-                    if self.id_guru != other.id_guru:
-                        collisions += 1 # bentrok guru
-                    if self.id_pel != other.id_pel:
-                        collisions += 1 # bentrok pelajaran
+            if (self.hari.get_x() == other.hari.get_x()) and (self.jam.get_x() == other.jam.get_x()) and (self.id_kelas != other.id_kelas) and (self.id_guru == other.id_guru):
+                collisions += 1
+            if (self.hari.get_x() == other.hari.get_x()) and (self.jam.get_x() == other.jam.get_x()) and (self.id_kelas == other.id_kelas):
+                collisions += 1
+            # if self.hari.get_x() == other.hari.get_x() and self.jam.get_x() == other.jam.get_x():
+            #     if self.id_kelas != other.id_kelas and self.id_guru == other.id_guru:
+            #         collisions += 1 # bentrok guru
+            #     if self.id_kelas == other.id_kelas:
+            #         collisions += 1 # bentrok waktu  
             return collisions
         else:
             return 0
@@ -79,16 +79,6 @@ class Pelajaran:
 
 def display_jadwal(jadwal, kelas_total):
     hari_dict = {1:'SENIN', 2: 'SELASA', 3:'RABU', 4:'KAMIS', 5:'JUMAT'}
-    # output = []
-    # for pelajaran in jadwal:
-    #     hari = pelajaran.hari.get_x()
-    #     jam = pelajaran.jam.get_x()
-    #     kelas = pelajaran.get_id_kelas()
-    #     guru = pelajaran.get_id_guru()
-    #     pel = pelajaran.get_id_pel()
-    #     output.append([hari, jam, kelas, guru, pel])
-        
-    # output = pd.DataFrame(output, columns=['hari','jam','kelas','guru','pelajaran'])
 
     kelas_columns = list(kelas_total)
     columns = ['hari', 'Jam'] + kelas_columns
@@ -101,10 +91,11 @@ def display_jadwal(jadwal, kelas_total):
         jam = pelajaran.jam.get_x()
         kelas = pelajaran.get_id_kelas()
         id = pelajaran.id
-        row = pd.DataFrame({'hari':[hari], 'Jam':[jam], kelas:[id]}, columns=columns)
+        lb = pelajaran.local_best
+        row = pd.DataFrame({'hari':[hari], 'Jam':[jam], kelas:[': '.join([id,'{:.2f}'.format(lb)])]}, columns=columns)
         output = pd.concat([output, row])
 
-    output = output.replace({'':np.nan}).fillna(method='bfill')
+    # output = output.replace({'':np.nan}).fillna(method='bf    ill')
     output = output.sort_values(by=['hari', 'Jam'])
     output['hari'] = output['hari'].apply(lambda x: hari_dict[x])
     output = output.replace(np.nan, '{:^5s}'.format(''), regex=True)
@@ -135,7 +126,7 @@ def read_input(f):
 
 def main():
     range_hari = {'min': 1, 'max': 5}
-    range_jam = {'min': 1, 'max': 10}
+    range_jam = {'min': 1, 'max': 5}
 
     print('generating particles...')
     
@@ -146,6 +137,8 @@ def main():
     for x in input_rows:
         jadwal.append(Pelajaran(range_hari, range_jam, id=x[0], id_guru=x[1], id_pel=x[2], id_kelas=x[3]))
         kelas.add(x[3])
+
+    print(len(jadwal))
 
     """calculate fitness"""
     W, c1, c2 = 0.5, 1.5, 1.5
@@ -163,7 +156,8 @@ def main():
                 collision += x.compare(y)
             fitness = 1 / (collision + 1)
             x.set_local_best(fitness)
-            global_best = fitness if fitness > global_best else global_best
+        global_best = fitness if fitness > global_best else global_best
+        for x in jadwal:
             x.update_velocity(W, c1, c2, global_best)
 
     for x in jadwal:
